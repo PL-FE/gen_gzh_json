@@ -5,41 +5,30 @@
 
 > 支持批量查询微信公众号信息并导出 JSON，适用于 [down.mptext.top](https://down.mptext.top) 平台配置导入。
 
+> [!IMPORTANT]
+> **重要提示：由于线上部署环境 API 请求会被目标服务器拦截并返回 403 (Forbidden) 或 CORS 跨域错误，本项目目前仅支持本地运行。请按照下方的“本地运行”步骤操作。**
+
+## 本地运行
+
+1. **安装依赖**
+   ```bash
+   pnpm i --frozen-lockfile
+   ```
+
+2. **启动开发服务器**
+   ```bash
+   pnpm dev
+   ```
+
+3. **访问本地预览**
+   - 启动后，在浏览器中打开：[http://localhost:3000](http://localhost:3000)
+
 ## 功能简介
 
 - 支持批量输入关键词，一键查询公众号信息
 - 查询结果可导出为标准 JSON 文件
 - 支持 API 密钥输入，安全调用接口
 - 查询进度与错误重试友好
-
-## 在线体验
-
-访问：[https://down.mptext.top/tools/gzh-json](https://down.mptext.top/tools/gzh-json)
-
-## 本地开发
-
-1. 安装依赖
-
-```bash
-npm install
-# 或 pnpm install / yarn install / bun install
-```
-
-2. 启动开发服务器
-
-```bash
-npm run dev
-# 或 pnpm dev / yarn dev / bun run dev
-```
-
-访问：http://localhost:3000
-
-## 构建与部署
-
-```bash
-npm run build
-npm run preview
-```
 
 ## 使用说明
 
@@ -62,39 +51,3 @@ npm run preview
 ## License
 
 MIT
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
