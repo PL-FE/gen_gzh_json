@@ -62,7 +62,7 @@
               class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white px-8 py-4 rounded-2xl font-semibold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
             >
               <Download :size="20" />
-              导出 JSON
+              导出 JSON {{ accounts.length > 0 ? `(${accounts.length})` : '' }}
             </button>
           </div>
         </section>
@@ -76,9 +76,16 @@
           <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl h-[28rem] overflow-hidden flex flex-col shadow-sm">
             <!-- 进度条 -->
             <div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-              <div class="flex justify-between text-xs mb-2">
-                <span>进度: {{ progress }}%</span>
-                <span>{{ accounts.length }} / {{ totalToProcess }} 已完成</span>
+              <div class="flex justify-between items-end text-xs mb-2">
+                <div class="space-y-1">
+                  <div class="font-medium">进度: {{ progress }}%</div>
+                  <div class="text-slate-500 dark:text-slate-400">共 {{ totalToProcess }} 个任务</div>
+                </div>
+                <div class="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+                  <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><CheckCircle2 :size="12" /> 完全一致: {{ normalLogs.length }}</span>
+                  <span class="text-yellow-600 dark:text-yellow-500 flex items-center gap-1"><AlertTriangle :size="12" /> 名称不一致: {{ mismatchCount }}</span>
+                  <span class="text-red-500 dark:text-red-400 flex items-center gap-1"><AlertCircle :size="12" /> 失败: {{ errorCount }}</span>
+                </div>
               </div>
               <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div 
@@ -93,30 +100,82 @@
               <div v-if="logs.length === 0" class="h-full flex items-center justify-center text-slate-400 text-sm italic">
                 等待开始任务...
               </div>
-              <div 
-                v-for="(log, i) in logs" 
-                :key="i"
-                class="p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-sm flex items-center gap-3 relative transition-all"
-                :class="log.status === 'success' ? 'bg-emerald-50/50 dark:bg-emerald-950/20' : 'bg-red-50/50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'"
-              >
-                <div v-if="log.status === 'success'" class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-emerald-100 dark:border-emerald-900/50">
-                  <img :src="log.data.round_head_img" class="w-full h-full object-cover" />
+              
+              <!-- 正常结果列表 -->
+              <template v-if="normalLogs.length > 0">
+                <div 
+                  v-for="(log, i) in normalLogs" 
+                  :key="'normal-' + i"
+                  class="p-3 rounded-xl border border-transparent text-sm flex items-center gap-3 relative transition-all bg-emerald-50/50 dark:bg-emerald-950/20"
+                >
+                  <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-emerald-100 dark:border-emerald-900/50">
+                    <img :src="log.data.round_head_img" class="w-full h-full object-cover" />
+                  </div>
+                  <div class="flex-1 truncate pr-16 text-xs">
+                    <p class="font-medium truncate text-sm">{{ log.keyword }}</p>
+                    <p class="text-[10px] text-slate-500 italic mt-0.5">{{ log.message }}</p>
+                  </div>
                 </div>
-                <div v-else class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500">
-                  <AlertCircle :size="16" />
+              </template>
+
+              <!-- 异常/需重试结果 -->
+              <div v-if="abnormalLogs.length > 0" class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex justify-between items-center mb-3 cursor-pointer group px-1" @click="showAbnormal = !showAbnormal">
+                  <h3 class="text-sm text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2 group-hover:text-blue-500 transition-colors">
+                    需要关注 / 重试的条目
+                    <span class="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{{ abnormalLogs.length }}</span>
+                  </h3>
+                  <button class="text-slate-400 group-hover:text-blue-500 transition-colors">
+                    <ChevronDown v-if="!showAbnormal" :size="16" />
+                    <ChevronUp v-else :size="16" />
+                  </button>
                 </div>
-                <div class="flex-1 truncate pr-16 text-xs">
-                  <p class="font-medium truncate text-sm" :class="log.status === 'error' ? 'text-red-600 dark:text-red-400' : ''">{{ log.keyword }}</p>
-                  <p class="text-[10px] text-slate-500 italic mt-0.5">{{ log.message }}</p>
-                </div>
-                <div v-if="log.status === 'error'" class="absolute right-3 top-3">
-                    <button 
-                        @click="retryKeyword(log, i)" 
-                        title="重试此关键词"
-                        class="p-1 px-2 rounded-lg bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 transition-colors flex items-center gap-1 text-[10px]"
-                    >
-                        <RotateCcw :size="12" /> 重试
-                    </button>
+                
+                <div v-show="showAbnormal" class="space-y-3 pb-2">
+                  <div 
+                    v-for="(log, i) in abnormalLogs" 
+                    :key="'abnormal-' + i"
+                    class="p-3 rounded-xl border text-sm flex items-center gap-3 relative transition-all"
+                    :class="[
+                      log.status === 'success'
+                        ? 'bg-yellow-50/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/30'
+                        : 'bg-red-50/50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'
+                    ]"
+                  >
+                    <div v-if="log.status === 'success'" class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-yellow-200 dark:border-yellow-900/50">
+                      <img :src="log.data.round_head_img" class="w-full h-full object-cover" />
+                    </div>
+                    <div v-else class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500">
+                      <AlertCircle :size="16" />
+                    </div>
+                    <div class="flex-1 truncate pr-16 text-xs">
+                      <p class="font-medium truncate text-sm" :class="log.status === 'error' ? 'text-red-600 dark:text-red-400' : ''">{{ log.keyword }}</p>
+                      <p 
+                        class="text-[10px] italic mt-0.5 flex items-center gap-1"
+                        :class="log.status === 'success' ? 'text-yellow-600 dark:text-yellow-500 font-medium' : 'text-slate-500'"
+                      >
+                        <AlertTriangle v-if="log.status === 'success'" :size="12" />
+                        {{ log.message }}
+                      </p>
+                    </div>
+                    <div class="absolute right-3 top-3 flex items-center gap-2">
+                        <button 
+                            @click="deleteLog(log)" 
+                            title="删除此记录（不导出）"
+                            class="p-1 px-2 rounded-lg transition-colors flex items-center gap-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 hover:text-red-500 dark:hover:bg-slate-700"
+                        >
+                            <Trash2 :size="12" /> 删除
+                        </button>
+                        <button 
+                            @click="retryKeyword(log)" 
+                            :title="log.status === 'success' ? '换个名字重试' : '重试此关键词'"
+                            class="p-1 px-2 rounded-lg transition-colors flex items-center gap-1 text-[10px]"
+                            :class="log.status === 'success' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200'"
+                        >
+                            <RotateCcw :size="12" /> 重试
+                        </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -136,7 +195,7 @@
 <script setup>
 import { 
   Eye, EyeOff, Play, Download, Loader2, ListIcon, 
-  Database, AlertCircle, CheckCircle2, ExternalLink, RotateCcw
+  Database, AlertCircle, CheckCircle2, ExternalLink, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Trash2
 } from 'lucide-vue-next'
 
 const apiKey = ref('')
@@ -146,6 +205,23 @@ const isProcessing = ref(false)
 const accounts = ref([])
 const logs = ref([])
 const totalToProcess = ref(0)
+const showAbnormal = ref(true)
+
+const normalLogs = computed(() => {
+  return logs.value.filter(log => log.status === 'success' && log.keyword === log.data?.nickname)
+})
+
+const abnormalLogs = computed(() => {
+  return logs.value.filter(log => log.status === 'error' || (log.status === 'success' && log.keyword !== log.data?.nickname))
+})
+
+const mismatchCount = computed(() => {
+  return logs.value.filter(log => log.status === 'success' && log.keyword !== log.data?.nickname).length
+})
+
+const errorCount = computed(() => {
+  return logs.value.filter(log => log.status === 'error').length
+})
 
 // 从内存/存储加载 Key
 onMounted(() => {
@@ -231,12 +307,30 @@ const processOne = async (keyword) => {
     }
 }
 
-const retryKeyword = async (log, index) => {
+const deleteLog = (log) => {
+    const logIndex = logs.value.indexOf(log)
+    if (logIndex !== -1) logs.value.splice(logIndex, 1)
+    
+    // 如果之前是成功状态的黄色记录，从已导出数组中移除
+    if (log.status === 'success' && log.data) {
+      const accIndex = accounts.value.findIndex(acc => acc === log.data)
+      if (accIndex !== -1) accounts.value.splice(accIndex, 1)
+    }
+}
+
+const retryKeyword = async (log) => {
     const keyword = prompt('请确认或修改关键词:', log.keyword)
     if (keyword === null) return // 取消
     
     // 移除旧记录
-    logs.value.splice(index, 1)
+    const logIndex = logs.value.indexOf(log)
+    if (logIndex !== -1) logs.value.splice(logIndex, 1)
+    
+    // 如果之前是成功且不一致的状态，也要从已导出的数据中移除
+    if (log.status === 'success' && log.data) {
+      const accIndex = accounts.value.findIndex(acc => acc === log.data)
+      if (accIndex !== -1) accounts.value.splice(accIndex, 1)
+    }
     
     // 这里我们不改变 totalToProcess, 仅仅是重跑一次
     try {
